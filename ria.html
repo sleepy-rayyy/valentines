@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Mobile Optimization: Prevent auto-zoom and rubber-banding -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Purple Haze Garden</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <style>
+        /* Mobile Reset: Prevent scrolling and bouncing */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            touch-action: none; /* Disables touch gestures like double-tap zoom */
+        }
+
+        .font-script { font-family: 'Great Vibes', cursive; }
+        .font-body { font-family: 'Montserrat', sans-serif; }
+
+        /* Floating Animation for Particles */
+        @keyframes float-up {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+
+        /* Swaying Animation for Flowers */
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        /* Swaying for Foreground Flowers (more movement) */
+        @keyframes sway-large {
+            0%, 100% { transform: rotate(-4deg); }
+            50% { transform: rotate(4deg); }
+        }
+
+        /* Gentle Pulse */
+        @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 0 20px #8b5cf6, 0 0 40px #4c1d95; }
+            50% { box-shadow: 0 0 30px #a78bfa, 0 0 60px #5b21b6; }
+        }
+
+        /* Bloom Animation */
+        @keyframes bloom {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-float { animation: float-up 12s linear infinite; }
+        .animate-sway { animation: sway 7s ease-in-out infinite; }
+        .animate-sway-large { animation: sway-large 6s ease-in-out infinite; }
+        .animate-bloom { animation: bloom 2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        
+        /* Utility for slow spin */
+        .animate-spin-slow {
+            animation: spin 8s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-black m-0 p-0 overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons (Replacing Lucide with Inline SVGs) ---
+        const Heart = ({ className, ...props }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className} 
+                {...props}
+            >
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+            </svg>
+        );
+
+        const Sparkles = ({ size = 24, className }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z" />
+                <path d="M5 3v4" />
+                <path d="M9 5h4" />
+                <path d="M3 7h16" />
+            </svg>
+        );
+
+        // --- Shared Definitions (Fixes Gradient Bugs) ---
+        const SharedSVGDefs = () => (
+            <svg width="0" height="0" className="absolute pointer-events-none">
+                <defs>
+                    <radialGradient id="sunflower-center">
+                        <stop offset="0%" stopColor="#78350f" />
+                        <stop offset="100%" stopColor="#451a03" />
+                    </radialGradient>
+                </defs>
+            </svg>
+        );
+
+        // --- Flower Components ---
+
+        const Sunflower = ({ size = 100, className, delay = 0 }) => {
+            return (
+                <div 
+                    className={`absolute origin-bottom ${className}`}
+                    style={{ animationDelay: `${delay}s` }}
+                >
+                    <svg width={size} height={size * 2} viewBox="0 0 100 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 200 C50 150 45 100 50 60" stroke="#4ade80" strokeWidth="4" />
+                        <path d="M50 140 Q20 130 10 110 Q30 140 50 150" fill="#22c55e" opacity="0.9" />
+                        <path d="M50 120 Q80 110 90 90 Q70 120 50 130" fill="#22c55e" opacity="0.9" />
+                        
+                        {/* BUG FIX & MOBILE OPTIMIZATION: 
+                            'transformOrigin: 50px 50px' ensures smooth spinning on all devices 
+                            without wobbling.
+                        */}
+                        <g className="animate-spin-slow" style={{ transformOrigin: '50px 50px' }}>
+                            {[...Array(12)].map((_, i) => (
+                                <ellipse key={`bp-${i}`} cx="50" cy="50" rx="8" ry="25" fill="#eab308" transform={`rotate(${i * 30} 50 50)`} />
+                            ))}
+                            {[...Array(10)].map((_, i) => (
+                                <ellipse key={`fp-${i}`} cx="50" cy="50" rx="6" ry="20" fill="#facc15" transform={`rotate(${i * 36 + 15} 50 50)`} opacity="0.9" />
+                            ))}
+                            <circle cx="50" cy="50" r="14" fill="#3f2305" />
+                            <circle cx="50" cy="50" r="12" fill="url(#sunflower-center)" />
+                        </g>
+                    </svg>
+                </div>
+            );
+        };
+
+        const Tulip = ({ size = 80, color = "#db2777", className, delay = 0 }) => {
+            return (
+                <div 
+                    className={`absolute origin-bottom ${className}`}
+                    style={{ animationDelay: `${delay}s` }}
+                >
+                    <svg width={size} height={size * 2.5} viewBox="0 0 100 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 250 C50 200 45 150 50 90" stroke="#22c55e" strokeWidth="3" />
+                        <path d="M50 230 Q20 180 15 130 Q40 170 50 200" fill="#16a34a" opacity="0.9" />
+                        <path d="M50 210 Q80 160 85 110 Q60 150 50 180" fill="#16a34a" opacity="0.9" />
+
+                        <g className="origin-center">
+                            <path d="M35 90 C35 50 50 25 50 25 C50 25 65 50 65 90" fill={color} style={{filter: 'brightness(0.7)'}} />
+                            <path d="M42 95 C42 45 50 30 50 30 C50 30 58 45 58 95" fill={color} style={{filter: 'brightness(0.9)'}} />
+                            <path d="M25 90 C25 40 50 35 50 35 C50 35 75 40 75 90 C75 120 25 120 25 90 Z" fill={color} />
+                        </g>
+                    </svg>
+                </div>
+            );
+        };
+
+        const Lavender = ({ size = 60, className, delay = 0 }) => {
+            return (
+                <div 
+                    className={`absolute origin-bottom ${className}`}
+                    style={{ animationDelay: `${delay}s` }}
+                >
+                    <svg width={size} height={size * 3} viewBox="0 0 60 200" fill="none">
+                        <path d="M30 200 Q35 150 30 50" stroke="#15803d" strokeWidth="2" />
+                        {[...Array(8)].map((_, i) => (
+                            <circle key={i} cx={30 + (i%2===0? -3:3)} cy={50 + i*8} r="3" fill="#a78bfa" />
+                        ))}
+                    </svg>
+                </div>
+            )
+        }
+
+        const Particles = () => {
+            const [particles, setParticles] = useState([]);
+
+            useEffect(() => {
+                const newParticles = Array.from({ length: 30 }).map((_, i) => ({
+                    id: i,
+                    left: Math.random() * 100,
+                    size: Math.random() * 4 + 2,
+                    delay: Math.random() * 5,
+                    duration: Math.random() * 10 + 10,
+                }));
+                setParticles(newParticles);
+            }, []);
+
+            return (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                    {particles.map((p) => (
+                        <div
+                            key={p.id}
+                            className="absolute rounded-full bg-purple-400 blur-[1px] opacity-0 animate-float"
+                            style={{
+                                left: `${p.left}%`,
+                                width: `${p.size}px`,
+                                height: `${p.size}px`,
+                                animationDelay: `${p.delay}s`,
+                                animationDuration: `${p.duration}s`,
+                                bottom: '-10px'
+                            }}
+                        />
+                    ))}
+                </div>
+            );
+        };
+
+        // --- Main App Component ---
+
+        const App = () => {
+            const [isOpen, setIsOpen] = useState(false);
+            const [showContent, setShowContent] = useState(false);
+
+            const handleOpen = () => {
+                setIsOpen(true);
+                setTimeout(() => {
+                    setShowContent(true);
+                }, 800); 
+            };
+
+            return (
+                <div className="relative w-full h-[100dvh] bg-black overflow-hidden flex flex-col items-center justify-center text-white select-none">
+                    
+                    <SharedSVGDefs />
+
+                    {/* Deep Purple Background */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_#4c1d95_0%,_#000000_100%)] z-[-1]" />
+                    
+                    {/* Texture */}
+                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] z-0 mix-blend-overlay pointer-events-none" />
+
+                    <Particles />
+
+                    {/* --- Intro Screen --- */}
+                    <div 
+                        className={`absolute inset-0 flex flex-col items-center justify-center z-50 transition-all duration-1000 ease-in-out ${
+                        isOpen ? 'opacity-0 scale-150 pointer-events-none blur-sm' : 'opacity-100 scale-100'
+                        }`}
+                    >
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-purple-600 rounded-full blur-[50px] opacity-40 animate-pulse"></div>
+                            <Heart className="w-24 h-24 text-purple-300 drop-shadow-[0_0_15px_rgba(168,85,247,0.8)] fill-purple-900/50 animate-bounce" />
+                        </div>
+                        
+                        {/* Responsive Title Size: text-4xl for mobile, text-5xl for desktop */}
+                        <h1 className="mt-8 text-4xl md:text-5xl font-script text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-white to-purple-200 drop-shadow-lg text-center px-4 leading-normal">
+                            For You
+                        </h1>
+
+                        <button
+                            onClick={handleOpen}
+                            className="mt-12 group relative px-8 py-3 bg-transparent overflow-hidden rounded-full transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-fuchsia-600 opacity-80 group-hover:opacity-100 transition-opacity blur-md"></div>
+                            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-fuchsia-600 opacity-60 rounded-full border border-white/20"></div>
+                            <span className="relative z-10 flex items-center gap-2 font-body text-white font-semibold tracking-wide">
+                                Reveal Garden <Sparkles size={16} className="animate-spin-slow" />
+                            </span>
+                        </button>
+                    </div>
+
+                    {/* --- The Garden (Revealed) --- */}
+                    {showContent && (
+                        <div className="relative w-full h-full z-10 overflow-hidden">
+                        
+                            {/* LAYER 1: Background Blur */}
+                            <div className="absolute inset-0 pointer-events-none opacity-50 blur-[3px]">
+                                <Sunflower size={140} className="left-[10%] bottom-[-20px] animate-sway animate-bloom" delay={0.1} />
+                                <Tulip size={100} color="#701a75" className="left-[25%] bottom-[10px] animate-sway animate-bloom" delay={0.2} />
+                                
+                                <Sunflower size={130} className="left-[40%] bottom-[0px] animate-sway animate-bloom" delay={0.15} />
+                                <Tulip size={90} color="#86198f" className="left-[60%] bottom-[15px] animate-sway animate-bloom" delay={0.25} />
+                                <Tulip size={100} color="#701a75" className="right-[5%] bottom-[10px] animate-sway animate-bloom" delay={0.35} />
+
+                                <Sunflower size={160} className="right-[15%] bottom-[-30px] animate-sway animate-bloom" delay={0.3} />
+                                <Tulip size={110} color="#4c1d95" className="right-[35%] bottom-[0px] animate-sway animate-bloom" delay={0.4} />
+                                <Sunflower size={120} className="left-[50%] -translate-x-1/2 bottom-[20px] animate-sway animate-bloom" delay={0.5} />
+                            </div>
+
+                            {/* LAYER 2: Mid-Ground */}
+                            <div className="absolute inset-0 pointer-events-none z-10">
+                                <Lavender size={70} className="left-[5%] bottom-[-10px] animate-sway animate-bloom" delay={0.6} />
+                                <Lavender size={80} className="right-[5%] bottom-[-10px] animate-sway animate-bloom" delay={0.7} />
+                                <Lavender size={60} className="left-[40%] bottom-[-5px] animate-sway animate-bloom" delay={0.8} />
+                                <Lavender size={70} className="right-[20%] bottom-[-15px] animate-sway animate-bloom" delay={0.9} />
+                                
+                                <Lavender size={75} className="left-[20%] bottom-[-12px] animate-sway animate-bloom" delay={0.65} />
+                                <Lavender size={65} className="right-[30%] bottom-[-8px] animate-sway animate-bloom" delay={0.75} />
+                                <Lavender size={85} className="left-[60%] bottom-[-15px] animate-sway animate-bloom" delay={0.85} />
+                            </div>
+
+                            {/* LAYER 3: Main Garden */}
+                            <div className="absolute inset-0 pointer-events-none z-20">
+                                {/* Left Side */}
+                                <Tulip size={130} color="#ec4899" className="left-[-10px] bottom-[-20px] animate-sway-large animate-bloom" delay={1.0} />
+                                <Sunflower size={180} className="left-[12%] bottom-[-50px] animate-sway-large animate-bloom" delay={1.2} />
+                                <Tulip size={120} color="#db2777" className="left-[22%] bottom-[-40px] z-5 animate-sway-large animate-bloom" delay={1.3} />
+
+                                {/* Center Cluster */}
+                                <Tulip size={140} color="#f43f5e" className="left-[35%] bottom-[-30px] z-10 animate-sway-large animate-bloom" delay={1.4} />
+                                <Sunflower size={200} className="left-[50%] -translate-x-1/2 bottom-[-60px] z-20 animate-sway-large animate-bloom drop-shadow-2xl" delay={1.5} />
+                                <Tulip size={140} color="#d946ef" className="right-[35%] bottom-[-30px] z-10 animate-sway-large animate-bloom" delay={1.6} />
+
+                                {/* Right Side */}
+                                <Tulip size={125} color="#c026d3" className="right-[22%] bottom-[-35px] z-5 animate-sway-large animate-bloom" delay={1.25} />
+                                <Sunflower size={180} className="right-[12%] bottom-[-50px] animate-sway-large animate-bloom" delay={1.3} />
+                                <Tulip size={130} color="#e11d48" className="right-[-10px] bottom-[-20px] animate-sway-large animate-bloom" delay={1.1} />
+                            </div>
+
+                            {/* Floating Petals Overlay */}
+                            <div className="absolute inset-0 pointer-events-none z-30">
+                                {[...Array(12)].map((_, i) => (
+                                    <div 
+                                    key={i}
+                                    className="absolute text-pink-300/60 animate-float"
+                                    style={{
+                                        left: `${Math.random() * 100}%`,
+                                        animationDelay: `${Math.random() * 5 + 2}s`,
+                                        fontSize: `${Math.random() * 20 + 10}px`
+                                    }}
+                                    >
+                                    {i % 2 === 0 ? '✿' : '✦'}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Watermark */}
+                            <div className="absolute top-12 left-0 right-0 text-center animate-bloom opacity-0" style={{animationDelay: '2s', animationFillMode: 'forwards'}}>
+                                <h2 className="font-script text-3xl text-white/30 tracking-widest">Happy Valentine's</h2>
+                            </div>
+
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
